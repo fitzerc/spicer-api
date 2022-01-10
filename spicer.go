@@ -3,26 +3,15 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"spicer-api/shared"
 
 	"github.com/gin-gonic/gin"
 )
 
-type spice struct {
-	Id         int     `json:"id"`
-	Name       string  `json:"name"`
-	Level      float32 `json:"level"`
-	Substitute string  `json:"substitute"`
-}
-
-//seed data
-var spices = []spice{
-	{Id: 1, Name: "Oregano", Level: 50, Substitute: "Rosemary"},
-	{Id: 2, Name: "Rosemary", Level: 25, Substitute: "Oregano"},
-	{Id: 3, Name: "Sage", Level: 75, Substitute: "Thyme"},
-	{Id: 4, Name: "Thyme", Level: 125, Substitute: "Sage"},
-}
+var dal shared.SpiceDal
 
 func main() {
+	dal = shared.FsSpiceDal{}
 	router := gin.Default()
 
 	router.GET("/spices", getSpices)
@@ -32,26 +21,26 @@ func main() {
 }
 
 func getSpices(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, spices)
+	c.IndentedJSON(http.StatusOK, dal.ReadSpices())
 }
 
 func postSpice(c *gin.Context) {
-	var newSpice spice
+	var newSpice shared.Spice
 
 	if err := c.BindJSON(&newSpice); err != nil {
 		fmt.Printf("Error processing request: %v", err.Error())
 		return
 	}
 
-	newSpice.Id = getNextId()
+	newSpice.Id = getNextId(dal.ReadSpices())
 
-	spices = append(spices, newSpice)
+	dal.WriteSpice(newSpice)
 	c.IndentedJSON(http.StatusCreated, newSpice)
 }
 
-func getNextId() int {
+func getNextId(s []shared.Spice) int {
 	maxId := 0
-	for _, spiceEntry := range spices {
+	for _, spiceEntry := range s {
 		if spiceEntry.Id > maxId {
 			maxId = spiceEntry.Id
 		}
